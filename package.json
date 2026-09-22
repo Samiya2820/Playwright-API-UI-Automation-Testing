@@ -1,0 +1,21 @@
+{
+  "name": "playwright-api-ui-automation-testing",
+  "version": "1.0.0",
+  "description": "Playwright + TypeScript framework: JB Hi-Fi (UI) and Swagger Petstore (API)",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --project=ui",
+    "test:api": "playwright test --project=api",
+    "test:headed": "playwright test --project=ui --headed",
+    "codegen": "playwright codegen https://www.jbhifi.com.au",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.6.0",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.2",
+    "typescript": "^7.0.2"
+  }
+}
