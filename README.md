@@ -5,10 +5,11 @@ A single end-to-end and API testing framework built with [Playwright Test](https
 ## 🚀 Features
 
 - **UI + API in one framework:** Two Playwright projects (`ui`, `api`) sharing config, reporter and tooling instead of two separate test setups.
-- **Page Object Model (POM):** UI locators and interactions live in `src/pages`, so tests read like sentences and a markup change only touches one file.
+- **Function-based UI helpers:** UI interactions live in `tests/ui/jbhifi/jbhifi.page.ts` as small, composable async functions (navigate, verify header, open a menu, search), so a spec reads as a sequence of steps and a markup change only touches one file.
+- **Test data kept separate from test logic:** Expected labels, categories and search terms live in `src/utils/uiTestData.ts` / `src/utils/apiTestData.ts`, not hardcoded inline in the specs.
 - **Typed API client:** `src/api/petClient.ts` wraps each Petstore endpoint (create/read/update/delete) with typed request/response shapes.
 - **Self-healing waits, not sleeps:** Flaky interactions (e.g. a click firing before the page's JS attaches) retry the whole action with `expect(...).toPass()` instead of a fixed delay.
-- **Reporting & artifacts:** HTML report with a screenshot on UI failure, a trace on retry, and every API call logged as a step with its request/response JSON attached.
+- **Reporting & artifacts:** HTML report with a trace for every run, a screenshot on UI failure, and every API call logged as a step with its request/response JSON attached.
 - **No hardcoded test data:** API tests generate a random pet (via Faker) with a collision-safe unique id at runtime, and clean it up afterwards even if a test fails.
 
 ## 🛠️ Prerequisites
@@ -19,23 +20,22 @@ A single end-to-end and API testing framework built with [Playwright Test](https
 ## 📁 Project Structure
 
 ```text
-playwright.config.ts        # Projects (ui / api), timeouts, reporters, base URLs
+playwright.config.ts          # Projects (ui / api), timeouts, reporters, base URLs
 src/
-├── pages/                  # UI page objects
-│   ├── HeaderComponent.ts    # Header, Products mega menu, search
-│   ├── HomePage.ts           # Opens the site, owns the header
-│   └── ProductListPage.ts    # Heading + product cards (category and search pages)
 ├── api/
 │   ├── types.ts               # Pet / Category / Tag / ApiMessage types
 │   └── petClient.ts           # create / getById / update / delete calls
 └── utils/
     ├── screenshot.ts          # Saves screenshots into verification/
     ├── popups.ts               # Closes JB Hi-Fi's marketing popup automatically
-    └── testData.ts             # Random pet + unique id (Faker)
+    ├── uiTestData.ts           # Expected UI values: header labels, categories, search terms
+    └── apiTestData.ts          # Random pet + unique id (Faker)
 tests/
-├── ui/jbhifi.spec.ts        # UI tests (home page, menu navigation, search)
-└── api/pet-crud.spec.ts     # API tests (create, read, update, delete)
-verification/                # Screenshots produced by the UI tests
+├── ui/jbhifi/
+│   ├── jbhifi.page.ts         # UI helper functions (navigate, verify header, menu, search)
+│   └── jbhifi.spec.ts         # UI tests (home page, menu navigation, search)
+└── api/pet-crud.spec.ts       # API tests (create, read, update, delete)
+verification/                  # Screenshots produced by the UI tests
 ```
 
 ## 📦 Getting Started
@@ -85,7 +85,7 @@ After a run finishes:
 ```bash
 npm run report
 ```
-This opens the HTML report for the last run. Failed UI tests attach a screenshot automatically, and a trace as well if the failure happened on a retry (`npx playwright show-trace <path>/trace.zip` to open one directly). On the API side, every request `PetClient` makes is recorded as its own step in the report, with the request and response — status, headers and body — attached as JSON, so you can see exactly what went over the wire without re-running anything.
+This opens the HTML report for the last run. Every test records a trace (`npx playwright show-trace <path>/trace.zip` to open one directly), and failed UI tests also attach a screenshot automatically. On the API side, every request `PetClient` makes is recorded as its own step in the report, with the request and response — status, headers and body — attached as JSON, so you can see exactly what went over the wire without re-running anything.
 
 ## 🤖 Continuous Integration
 
@@ -95,7 +95,7 @@ No CI workflow is set up in this repository yet. `playwright.config.ts` already 
 
 - **Chromium only, headless by default:** eBay AU and ASOS AU (the other obvious "public shopping site" choices) both return HTTP 403 to headless browsers; JB Hi-Fi doesn't, so it's the one this suite runs against, with no attempt to disguise the browser or spoof headers.
 - **Ordering, not full independence:** the API tests intentionally run in sequence (`test.describe.configure({ mode: 'serial' })`) because create → read → update → delete share one pet; UI tests in a file also run one after another since JB Hi-Fi's pages are heavy enough that three in parallel start timing out each other.
-- **Smart waits over sleeps:** assertions use Playwright's auto-waiting (`expect(locator).toBeVisible()`, etc.), and the couple of genuinely flaky interactions (search, menu navigation) retry the whole action via `toPass()` rather than adding a fixed delay.
+- **Smart waits over sleeps:** assertions use Playwright's auto-waiting (`expect(locator).toBeVisible()`, etc.), and the interactions that are genuinely flaky on this site — the page renders before its own JS attaches, so an early click/fill is silently ignored — retry the whole action via `toPass()` (see `verifyHeaderElements`, `navigateToProductsMenuAndSelectCategory`, `navigateToSubCategory` and `searchForProduct` in `tests/ui/jbhifi/jbhifi.page.ts`) rather than adding a fixed delay.
 - **Hooks for cleanup:** an `afterAll` hook deletes the API test's pet even if an earlier test in the file failed, so the shared public server doesn't accumulate leftovers.
 - **Respecting third-party sites:** both targets are live, real services outside this repo's control — assertions avoid brittle fixed prices/counts, and the UI suite isn't meant to be run repeatedly in quick succession against JB Hi-Fi.
 

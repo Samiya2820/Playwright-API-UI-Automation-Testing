@@ -18,13 +18,18 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 10_000 },
 
+
   // 'list' prints progress in the terminal; 'html' builds a browsable report (open with `npm run report`), without auto-launching a browser.
   reporter: [['list'], ['html', { open: 'never' }]],
 
   use: {
     // Record a trace only when a failed test retries (for diagnosis); recording every test slowed JB Hi-Fi's heavy pages.
-    trace: 'on-first-retry',
+    trace: 'on',
     screenshot: 'only-on-failure',
+    // Max time each action (click, fill, etc.) waits for its element before failing.
+    actionTimeout: 15_000,
+    // Max time page.goto()/page.waitForNavigation() etc. are allowed to take (JB Hi-Fi pages are heavy).
+    navigationTimeout: 45_000,
   },
 
   projects: [
